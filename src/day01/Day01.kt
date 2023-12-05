@@ -1,3 +1,7 @@
+package day01
+
+import println
+import readInput
 
 private fun part1(input: List<String>): Int = input.sumOf { line ->
     val firstDigit = line.firstOrNull { c -> c.isDigit() }?.digitToInt()
