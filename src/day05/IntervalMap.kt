@@ -3,7 +3,12 @@ package day05
 import java.util.TreeMap
 
 class IntervalMap<V>(vararg pairs :Pair<ComparableRange, V>) : MutableMap<Long, V> {
-    private val content = TreeMap<ComparableRange, V>(pairs.toMap())
+    private val content = TreeMap<ComparableRange, V>()
+
+    init {
+        pairs.forEach { put(it.first, it.second) }
+    }
+
     companion object {
         fun <V> of(vararg pairs :Pair<LongRange, V>) = IntervalMap(*(pairs.map {
             Pair(ComparableRange(it.first), it.second)
@@ -63,7 +68,7 @@ class IntervalMap<V>(vararg pairs :Pair<ComparableRange, V>) : MutableMap<Long, 
 
     override fun putAll(from :Map<out Long, V>) = from.forEach { k, v -> put(k, v) }
 
-    override fun put(key :Long, value :V) = put(day05.ComparableRange(key..key), value).firstOrNull()
+    override fun put(key :Long, value :V) = put(ComparableRange(key..key), value).firstOrNull()
 
     override fun get(key :Long) :V? {
         val i = content.keys.find { it.contains(key) }

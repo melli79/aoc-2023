@@ -1,10 +1,15 @@
 package day05
 
 import java.util.TreeSet
+import kotlin.math.max
 import kotlin.math.min
 
 class IntervalSet(vararg ranges :ComparableRange) : MutableSet<Long> {
     private val content = TreeSet<ComparableRange>()
+
+    init {
+        ranges.forEach { addInterval(it) }
+    }
 
     companion object {
         fun of(vararg ranges :LongRange) = IntervalSet(*(ranges.map { ComparableRange(it) }.toTypedArray()))
@@ -25,6 +30,16 @@ class IntervalSet(vararg ranges :ComparableRange) : MutableSet<Long> {
 
     override fun add(element :Long) :Boolean {
         TODO("Not yet implemented")
+    }
+
+    fun addInterval(range :ComparableRange) :Boolean {
+        val overlaps = content.filter { range.compareTo(it) in -2..2 }
+        if (overlaps.isEmpty())
+            return content.add(range)
+        val first = min(overlaps.first().first, range.first)
+        val last = max(overlaps.last().last, range.last)
+        content.removeAll(overlaps)
+        return content.add(ComparableRange(first..last))
     }
 
     override fun isEmpty() = content.isEmpty()
@@ -63,7 +78,6 @@ data class ComparableRange(val content :LongRange) : Comparable<ComparableRange>
         other.last<first -> 5
         first < other.first ->
             if (other.last<last) -1
-            else if (first==other.first && last==other.last) 0
             else -2
         other.first < first ->
             if (last<=other.last) 1
