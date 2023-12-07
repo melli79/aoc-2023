@@ -5,7 +5,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 class IntervalSet(vararg ranges :ComparableRange) : MutableSet<Long> {
-    private val content = TreeSet<ComparableRange>()
+    val intervals = TreeSet<ComparableRange>()
 
     init {
         ranges.forEach { addInterval(it) }
@@ -17,39 +17,41 @@ class IntervalSet(vararg ranges :ComparableRange) : MutableSet<Long> {
         fun ofComparable(ranges :Collection<ComparableRange>) = IntervalSet(*ranges.toTypedArray())
     }
 
+    override fun toString() = intervals.joinToString(" u ") { "${it.first}..${it.last}" }
+
     override val size :Int
-        get() = min(content.sumOf { it.endExclusive-it.first }, Int.MAX_VALUE.toLong()).toInt()
+        get() = min(intervals.sumOf { it.endExclusive-it.first }, Int.MAX_VALUE.toLong()).toInt()
 
     override fun clear() {
-        TODO("Not yet implemented")
+        TODO("unimplemented")
     }
 
     override fun addAll(elements :Collection<Long>) :Boolean {
-        TODO("Not yet implemented")
+        TODO("unimplemented")
     }
 
     override fun add(element :Long) :Boolean {
-        TODO("Not yet implemented")
+        TODO("unimplemented")
     }
 
     fun addInterval(range :ComparableRange) :Boolean {
-        val overlaps = content.filter { range.compareTo(it) in -2..2 }
+        val overlaps = intervals.filter { range.compareTo(it) in -2..2 }
         if (overlaps.isEmpty())
-            return content.add(range)
+            return intervals.add(range)
         val first = min(overlaps.first().first, range.first)
         val last = max(overlaps.last().last, range.last)
-        content.removeAll(overlaps)
-        return content.add(ComparableRange(first..last))
+        intervals.removeAll(overlaps)
+        return intervals.add(ComparableRange(first..last))
     }
 
-    override fun isEmpty() = content.isEmpty()
+    override fun isEmpty() = intervals.isEmpty()
 
     override fun iterator() :MutableIterator<Long> {
-        TODO("Not yet implemented")
+        TODO("unimplemented")
     }
 
     override fun retainAll(elements :Collection<Long>) :Boolean {
-        TODO("Not yet implemented")
+        TODO("unimplemented")
     }
 
     override fun removeAll(elements :Collection<Long>) :Boolean {
@@ -58,35 +60,12 @@ class IntervalSet(vararg ranges :ComparableRange) : MutableSet<Long> {
     }
 
     override fun remove(element :Long) :Boolean {
-        TODO("Not yet implemented")
+        TODO("unimplemented")
     }
 
     override fun containsAll(elements :Collection<Long>) = elements.all { contains(it) }
 
-    override fun contains(element :Long) = content.any { it.contains(element) }
-}
-
-data class ComparableRange(val content :LongRange) : Comparable<ComparableRange> {
-    val first = content.first
-    val last = content.last
-    val endExclusive = content.endExclusive
-
-    operator fun contains(element :Long) = content.contains(element)
-
-    override fun compareTo(other :ComparableRange) = when {
-        last < other.first -> -5
-        other.last<first -> 5
-        first < other.first ->
-            if (other.last<last) -1
-            else -2
-        other.first < first ->
-            if (last<=other.last) 1
-            else 2
-        else -> // first==other.first
-            if (last<other.last) -1
-            else if (other.last<last) 1
-            else 0 // true equality
-    }
+    override fun contains(element :Long) = intervals.any { it.contains(element) }
 }
 
 @Suppress("DEPRECATION")
@@ -107,3 +86,6 @@ fun ComparableRange.leftExceed(removal :ComparableRange) :ComparableRange? =
 
 fun ComparableRange.rightExceed(removal :ComparableRange) :ComparableRange? =
     content.rightExceed(removal.content)?.let { ComparableRange(it) }
+
+fun intersect(keyRange :ComparableRange, first :ComparableRange) =
+    max(keyRange.first, first.first)..min(keyRange.last, first.last)

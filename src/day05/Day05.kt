@@ -80,7 +80,7 @@ private fun readMaps(input :Iterator<String>) :Map<Pair<String, String>, Interva
     return result
 }
 
-private fun part2(inputLines :List<String>) :Long {
+private fun part2(inputLines :List<String>) :Long? {
     val input = inputLines.iterator()
     val seedData = input.next().split(' ', '\t', '\n').drop(1).map { it.toLong() }
     val seedIntervals = seedData.windowed(2,2)
@@ -93,34 +93,61 @@ private fun part2(inputLines :List<String>) :Long {
     check(path.first() == SEED)
     check(path.last() == LOCATION)
     val loc2details = groupDetails(seedIntervals, path, maps)
-    return loc2details.keys.minOf { if (it.first*it.last>0L)  min(abs(it.first), abs(it.last)) else 0L }
+//    println(loc2details.intervalEntries.entries.joinToString("\n") { "${it.key}:  "+it.value.joinToString { (k,v) -> "$k: $v" }})
+    return loc2details.keys.intervals.minOfOrNull {
+        if (sgn(it.first)==sgn(it.last))
+            min(abs(it.first), abs(it.last))
+        else 0L
+    }
 }
 
 private fun groupDetails(
     seedRanges :IntervalSet,
     path :List<String>,
-    maps :Map<Pair<String, String>, Map<Long, Long>>
-) :Map<ComparableRange, List<Pair<String, LongRange>>> {
-    val loc2details = mutableMapOf<ComparableRange, List<Pair<String, LongRange>>>()
-    for (seedRange in seedRanges) {
-        var last = Pair(SEED, seedRange)
-        val details = mutableListOf(last)
-        path.windowed(2).forEach { (src, tar) ->
-            val map = maps[Pair(src, tar)]
-            checkNotNull(map)
-            TODO("implement")
-//            val values = map.tryMap(last.second)
-//            if (values.size==1) {
-//                val value = values.first()
-//                if (tar == LOCATION) {
-//                    loc2details[value] = details
-//                    println("location $value: ${details.joinToString { "${it.first}=${it.second}" }}")
-//                } else
-//                    details.add(Pair(tar, value))
-//            }            last = Pair(tar, value)
+    maps :Map<Pair<String, String>, IntervalMap<Long>>
+) :IntervalMap<List<Pair<String, ComparableRange>>> {
+    val result = IntervalMap.of(seedRanges.intervals.map { Pair(it, mutableMapOf(Pair(SEED, 0L))) })
+    path.windowed(2).forEach { (src, tar) ->
+        val map = maps[Pair(src, tar)]
+        checkNotNull(map)
+        for (entry in result.intervalEntries.entries.toList()) {
+            val offset = entry.value[src]!!
+            val interval = entry.key
+            val mappings = map.gatherMappings(interval.shift(offset))
+            if (mappings.size == 1) {
+                entry.value[tar] = mappings.values.first() + offset
+            } else {
+                result.remove(entry.key)
+                mappings.intervalEntries.forEach { key, v ->
+                    val value = entry.value.toMap().toMutableMap()
+                    value[tar] = v+offset
+                    result.put(key.shift(-offset), value)
+                }
+            }
         }
     }
-    return loc2details
+    return result.shuffleToLocation()
+}
+
+private fun IntervalMap<MutableMap<String, Long>>.shuffleToLocation() = intervalEntries.map {
+        val offset :Long = it.value[LOCATION]!!
+        val interval = it.key
+        Pair(interval.shift(offset), it.value.entries
+            .filter { (k, _) -> k != LOCATION }
+            .map { (k, v :Long) -> Pair(k, interval.shift(v - offset)) })
+    }.toTypedArray().let { IntervalMap(*it) }
+
+private fun IntervalMap<Long>.gatherMappings(keyRange :ComparableRange) :IntervalMap<Long> {
+    val overlaps = keys.intervals.filter { keyRange.compareTo(it) in -2..2 }
+    val first = overlaps.firstOrNull()
+    val left = if (first!=null) keyRange.leftExceed(first)  else keyRange
+    val last = overlaps.lastOrNull()
+    val right = if (last!=null) keyRange.rightExceed(last)  else null
+    return ((if (left!=null) listOf(Pair(left, 0L))  else emptyList()) + overlaps.map {
+        val key = intersect(keyRange, it)
+        Pair(ComparableRange(key), this.getOrDefault(key.first, 0L))
+    } +if(right!=null) listOf(Pair(right, 0L))  else emptyList()).toTypedArray()
+        .let { IntervalMap(*it) }
 }
 
 fun main() {
@@ -128,7 +155,15 @@ fun main() {
 
     val input = readInput("Day05/day05")
     part1(input).println()
+    println("\nPart 2")
 
-    check(part2(readInput("Day05/day05_test")) == 5L)
+    val t2 = part2(readInput("Day05/day05_test"))
+    check(t2 == 46L) { "expected 46, but got $t2." }
     part2(input).println()
+}
+
+fun sgn(x :Long) = when {
+    x > 0L -> 1
+    x < 0L -> -1
+    else -> 0
 }
